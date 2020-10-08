@@ -4,24 +4,40 @@ import numpy as np
 
 class Scene:
     def __init__(self):
-        self.sphere = Sphere([0,0,5], 1, Material(1,1))
+        self.geometry = [
+            Sphere([1.1,0,3], 1, Material(1,1)),
+            Sphere([-1.1,0,3], 1, Material(1,1))
+        ]
 
     def storeGeometry(self):
         pass
 
     def shootRay(self, ray, depth = 0):
-        if depth > 4:
+        if depth > 7:
             return Color([0,0,0])
-        intersection = self.sphere.getIntersection(ray)
+        intersection = None
+        closestShape = None
+        for shape in self.geometry:
+            tempIntersection = shape.getIntersection(ray)
+            if tempIntersection is not None and self.closer(tempIntersection, intersection, ray.origin):
+                intersection = tempIntersection
+                closestShape = shape
         if intersection is not None:
-            return self.sphere.computeLight(ray, intersection, self, depth)
+            return closestShape.computeLight(ray, intersection, self, depth)
         brightness = (ray.direction[1]+1)*255/2
         return Color([brightness, brightness, brightness])
+
+    def closer(self, tempIntersection, intersection, origin):
+        if intersection is None:
+            return True
+        v1 = tempIntersection - origin
+        v2 = intersection - origin
+        return np.dot(v1,v1) < np.dot(v2,v2)
 
 
 class Ray:
     def __init__(self, origin, direction):
-        self.origin = origin
+        self.origin = np.array(origin)
         self.direction = np.array(direction)/np.linalg.norm(direction)
 
 
@@ -35,6 +51,7 @@ class Material:
         direction = ray.direction-2*normal*np.dot(ray.direction,normal)
         directions.append((direction,1))
         return directions
+
 
 class Plane:
     def getIntersection(self, ray):
@@ -75,6 +92,7 @@ class Light:
     def __init__(self, position):
         self.position = position
 
+
 class Camera:
     def __init__(self, ray, fov):
         self.ray = ray
@@ -112,3 +130,4 @@ if __name__ == '__main__':
 
     image = Image.fromarray(data)
     image.save("output/sphere.png")
+    image.show()
