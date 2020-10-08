@@ -54,7 +54,7 @@ class Sphere:
         t = (np.dot(self.origin, ray.direction)- np.dot(ray.origin, ray.direction))/np.dot(ray.direction, ray.direction)
         v = ray.origin + t*ray.direction
         vq = self.origin-v
-        if np.dot(vq,vq) < self.r**2:
+        if np.dot(vq,vq) < self.r**2 and t >= 0:
             y = np.sqrt(self.r**2-np.dot(vq, vq))
             return ray.origin+(t-y)*ray.direction
         return None
@@ -67,7 +67,7 @@ class Sphere:
         color = Color([0,0,0])
         for direction, magnitude in directions:
             color2 = scene.shootRay(Ray(intersection+0.01*direction, direction), depth+1)
-            color.add(color2)
+            color = color.add(color2)
         return color
 
 
@@ -92,7 +92,7 @@ class Camera:
 
 class Color:
     def __init__(self, rgb):
-        self.color = [rgb[0]/255, rgb[1]/255, rgb[2]/255]
+        self.color = np.array([rgb[0]/255, rgb[1]/255, rgb[2]/255])
 
     def restore(self):
         return [np.floor(self.color[0]*255), np.floor(self.color[1]*255), np.floor(self.color[2]*255)]
@@ -104,8 +104,8 @@ class Color:
 
 # Press the green button in the gutter to run the script.
 if __name__ == '__main__':
-    width = 256
-    height = 256
+    width = 1024
+    height = 1024
     data = np.zeros((height, width, 3), dtype = np.uint8)
     camera = Camera(Ray([0,0,0], [0,0,1]), np.pi/2)
     camera.renderImage(Scene(), data, width, height)
