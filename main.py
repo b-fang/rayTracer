@@ -1,12 +1,15 @@
 from PIL import Image
 import numpy as np
 
+# global approximation value
+EPSILON = 0.01
 
 class Scene:
     def __init__(self):
         self.geometry = [
             Sphere([1.1,0,3], 1, Material(1,1)),
-            Sphere([-1.1,0,3], 1, Material(1,1))
+            Sphere([-1.1,0,3], 1, Material(1,1)),
+            Plane([0,1,0],[0,-1,0], Material(1,0.5))
         ]
 
     def storeGeometry(self):
@@ -53,22 +56,44 @@ class Material:
         return directions
 
 
-class Plane:
+class Shape:
+    def computeLight(self, ray, intersection, scene, depth):
+        directions = self.material.getDirections(ray, self.getNormal(intersection), scene)
+        color = Color([0,0,0])
+        for direction, magnitude in directions:
+            color2 = scene.shootRay(Ray(intersection+EPSILON*direction, direction), depth+1)
+            color = color.add(color2)
+        return color.scale(0.9)
+
+
+class Plane(Shape):
+    def __init__(self, normal, point, material):
+        self.normal = np.array(normal)
+        self.point = np.array(point)
+        self.material = material
+
     def getIntersection(self, ray):
-        pass
+        # make sure that dot product of outgoing ray and plane is not extremely small/zero
+        denom = np.dot(ray.direction, self.normal)
+        if np.abs(denom) < EPSILON:
+            return None
+        t = np.dot((self.point-ray.origin),self.normal)/denom
+        if t >= 0:
+            return ray.origin + t*ray.direction
+        return None
 
-    def computeLight(self, ray):
-        pass
+    def getNormal(self, intersection):
+        return self.normal
 
 
-class Sphere:
+class Sphere(Shape):
     def __init__(self, origin, radius, material):
         self.origin = np.array(origin)
         self.r = radius
         self.material = material
 
     def getIntersection(self, ray):
-        t = (np.dot(self.origin, ray.direction)- np.dot(ray.origin, ray.direction))/np.dot(ray.direction, ray.direction)
+        t = (np.dot(self.origin, ray.direction) - np.dot(ray.origin, ray.direction))/np.dot(ray.direction, ray.direction)
         v = ray.origin + t*ray.direction
         vq = self.origin-v
         if np.dot(vq,vq) < self.r**2 and t >= 0:
@@ -78,14 +103,6 @@ class Sphere:
 
     def getNormal(self, intersection):
         return (self.origin-intersection)/self.r
-
-    def computeLight(self, ray, intersection, scene, depth):
-        directions = self.material.getDirections(ray, self.getNormal(intersection), scene)
-        color = Color([0,0,0])
-        for direction, magnitude in directions:
-            color2 = scene.shootRay(Ray(intersection+0.01*direction, direction), depth+1)
-            color = color.add(color2)
-        return color
 
 
 class Light:
@@ -118,6 +135,9 @@ class Color:
     def add(self, color):
         newColor = np.clip(self.color+color.color, 0, 1)
         return Color(newColor*255)
+
+    def scale(self, scalar):
+        return Color(self.color*scalar*255)
 
 
 # Press the green button in the gutter to run the script.
