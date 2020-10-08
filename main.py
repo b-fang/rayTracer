@@ -104,11 +104,11 @@ class Color:
 
 # Press the green button in the gutter to run the script.
 if __name__ == '__main__':
-    width = 1024
-    height = 1024
+    width = 256
+    height = 256
     data = np.zeros((height, width, 3), dtype = np.uint8)
     camera = Camera(Ray([0,0,0], [0,0,1]), np.pi/2)
     camera.renderImage(Scene(), data, width, height)
 
     image = Image.fromarray(data)
-    image.show()
+    image.save("output/sphere.png")
