@@ -114,6 +114,14 @@ class Camera:
     def __init__(self, ray, fov):
         self.ray = ray
         self.fov = fov
+        d = self.ray.direction
+        j = np.array([0,1,0])
+        right = np.cross(d,j)
+        right = right/np.linalg.norm(right)
+        up = np.cross(right, d)
+        up = up/np.linalg.norm(up)
+        #np.column_stack arranges the vectors as columns and creates a matrix
+        self.matrix = np.column_stack((right, up, d))
 
     def renderImage(self, scene, data, width, height):
         for x in range(width):
@@ -122,6 +130,8 @@ class Camera:
                 ny = 1 - 2*y/height
                 a = width/height
                 direction = [a*np.tan(self.fov/2)*nx, np.tan(self.fov/2)*ny, 1]
+                #np.matmul returns the matrix from the matrix multiplication
+                direction = np.matmul(self.matrix, direction)
                 data[y,x] = scene.shootRay(Ray(self.ray.origin, direction)).restore()
 
 
@@ -145,7 +155,7 @@ if __name__ == '__main__':
     width = 256
     height = 256
     data = np.zeros((height, width, 3), dtype = np.uint8)
-    camera = Camera(Ray([0,0,0], [0,0,1]), np.pi/2)
+    camera = Camera(Ray([0,0,0], [0,1,1]), np.pi/2)
     camera.renderImage(Scene(), data, width, height)
 
     image = Image.fromarray(data)
