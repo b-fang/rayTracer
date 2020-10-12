@@ -4,20 +4,21 @@ import numpy as np
 # global approximation value
 EPSILON = 0.01
 
+
 class Scene:
     def __init__(self):
         self.geometry = [
-            Sphere([1.1,0,3], 1, Material(1,1)),
-            Sphere([-1.1,0,3], 1, Material(1,1)),
-            Plane([0,1,0],[0,-1,0], Material(1,0.5))
+            Sphere([1.1, 0, 3], 1, Material(1, 1), [100, 200, 100]),
+            Sphere([-1.1, 0, 3], 1, Material(1, 1), [200, 100, 100]),
+            Plane([0, 1, 0], [0, -1, 0], Material(1, 0.5), [100, 100, 200])
         ]
 
     def storeGeometry(self):
         pass
 
-    def shootRay(self, ray, depth = 0):
+    def shootRay(self, ray, depth=0):
         if depth > 7:
-            return Color([0,0,0])
+            return Color([0, 0, 0])
         intersection = None
         closestShape = None
         for shape in self.geometry:
@@ -27,15 +28,15 @@ class Scene:
                 closestShape = shape
         if intersection is not None:
             return closestShape.computeLight(ray, intersection, self, depth)
-        brightness = (ray.direction[1]+1)*255/2
-        return Color([brightness, brightness, brightness])
+        brightness = (ray.direction[1]+1)/2
+        return Color([255, 255, 255]).scale(1-brightness).add(Color([120, 190, 255]).scale(brightness))
 
     def closer(self, tempIntersection, intersection, origin):
         if intersection is None:
             return True
         v1 = tempIntersection - origin
         v2 = intersection - origin
-        return np.dot(v1,v1) < np.dot(v2,v2)
+        return np.dot(v1, v1) < np.dot(v2, v2)
 
 
 class Ray:
@@ -57,17 +58,21 @@ class Material:
 
 
 class Shape:
+    def __init__(self, color):
+        self.color = Color(color)
+
     def computeLight(self, ray, intersection, scene, depth):
         directions = self.material.getDirections(ray, self.getNormal(intersection), scene)
-        color = Color([0,0,0])
+        color = Color([0, 0, 0])
         for direction, magnitude in directions:
             color2 = scene.shootRay(Ray(intersection+EPSILON*direction, direction), depth+1)
             color = color.add(color2)
-        return color.scale(0.9)
+        return color.multiply(self.color)
 
 
 class Plane(Shape):
-    def __init__(self, normal, point, material):
+    def __init__(self, normal, point, material, color=[255, 255, 255]):
+        super().__init__(color)
         self.normal = np.array(normal)
         self.point = np.array(point)
         self.material = material
@@ -77,7 +82,7 @@ class Plane(Shape):
         denom = np.dot(ray.direction, self.normal)
         if np.abs(denom) < EPSILON:
             return None
-        t = np.dot((self.point-ray.origin),self.normal)/denom
+        t = np.dot((self.point-ray.origin), self.normal)/denom
         if t >= 0:
             return ray.origin + t*ray.direction
         return None
@@ -87,7 +92,8 @@ class Plane(Shape):
 
 
 class Sphere(Shape):
-    def __init__(self, origin, radius, material):
+    def __init__(self, origin, radius, material, color=[255, 255, 255]):
+        super().__init__(color)
         self.origin = np.array(origin)
         self.r = radius
         self.material = material
@@ -96,7 +102,7 @@ class Sphere(Shape):
         t = (np.dot(self.origin, ray.direction) - np.dot(ray.origin, ray.direction))/np.dot(ray.direction, ray.direction)
         v = ray.origin + t*ray.direction
         vq = self.origin-v
-        if np.dot(vq,vq) < self.r**2 and t >= 0:
+        if np.dot(vq, vq) < self.r**2 and t >= 0:
             y = np.sqrt(self.r**2-np.dot(vq, vq))
             return ray.origin+(t-y)*ray.direction
         return None
@@ -106,8 +112,9 @@ class Sphere(Shape):
 
 
 class Light:
-    def __init__(self, position):
+    def __init__(self, position, color):
         self.position = position
+        self.color = Color(color)
 
 
 class Camera:
@@ -115,12 +122,12 @@ class Camera:
         self.ray = ray
         self.fov = fov
         d = self.ray.direction
-        j = np.array([0,1,0])
-        right = np.cross(d,j)
+        j = np.array([0, 1, 0])
+        right = np.cross(d, j)
         right = right/np.linalg.norm(right)
         up = np.cross(right, d)
         up = up/np.linalg.norm(up)
-        #np.column_stack arranges the vectors as columns and creates a matrix
+        # np.column_stack arranges the vectors as columns and creates a matrix
         self.matrix = np.column_stack((right, up, d))
 
     def renderImage(self, scene, data, width, height):
@@ -130,7 +137,7 @@ class Camera:
                 ny = 1 - 2*y/height
                 a = width/height
                 direction = [a*np.tan(self.fov/2)*nx, np.tan(self.fov/2)*ny, 1]
-                #np.matmul returns the matrix from the matrix multiplication
+                # np.matmul returns the matrix from the matrix multiplication
                 direction = np.matmul(self.matrix, direction)
                 data[y,x] = scene.shootRay(Ray(self.ray.origin, direction)).restore()
 
@@ -149,15 +156,18 @@ class Color:
     def scale(self, scalar):
         return Color(self.color*scalar*255)
 
+    def multiply(self, color):
+        return Color(np.multiply(self.color, color.color)*255)
+
 
 # Press the green button in the gutter to run the script.
 if __name__ == '__main__':
-    width = 256
-    height = 256
-    data = np.zeros((height, width, 3), dtype = np.uint8)
-    camera = Camera(Ray([0,0,0], [0,1,1]), np.pi/2)
+    width = 1024
+    height = 1024
+    data = np.zeros((height, width, 3), dtype=np.uint8)
+    camera = Camera(Ray([0, -0.5, 0], [0, 0.20, 1]), np.pi/2)
     camera.renderImage(Scene(), data, width, height)
 
     image = Image.fromarray(data)
-    image.save("output/sphere.png")
+    image.save("output/sphere2.png")
     image.show()
