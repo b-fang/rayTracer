@@ -176,5 +176,5 @@ if __name__ == '__main__':
     camera.renderImage(Scene(), data, width, height)
 
     image = Image.fromarray(data)
-    image.save("output/sphere2.png")
+    image.save("output/sphere.png")
     image.show()
