@@ -73,6 +73,7 @@ class Shape:
         color = Color([0, 0, 0])
         for direction in directions:
             color2 = scene.shootRay(Ray(intersection+EPSILON*direction, direction), depth+1)
+            color2 = color2.scale(1/len(directions))
             color = color.add(color2)
         return color.multiply(self.material.color)
 
@@ -113,7 +114,7 @@ class Sphere(Shape):
         return None
 
     def getNormal(self, intersection):
-        return (self.origin-intersection)/self.r
+        return (intersection-self.origin)/self.r
 
 
 class Light:
