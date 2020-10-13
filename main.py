@@ -8,16 +8,16 @@ EPSILON = 0.01
 class Scene:
     def __init__(self):
         self.geometry = [
-            Sphere([1.1, 0, 3], 1, Material(1, 1), [100, 200, 100]),
-            Sphere([-1.1, 0, 3], 1, Material(1, 1), [200, 100, 100]),
-            Plane([0, 1, 0], [0, -1, 0], Material(1, 0.5), [100, 100, 200])
+            Sphere([1.1, 0, 3], 1, Material(1, [100, 200, 100])),
+            Sphere([-1.1, 0, 3], 1, Material(1, [200, 100, 100])),
+            Plane([0, 1, 0], [0, -1, 0], Material(1, [100, 100, 200]))
         ]
 
     def storeGeometry(self):
         pass
 
     def shootRay(self, ray, depth=0):
-        if depth > 7:
+        if depth > 3:
             return Color([0, 0, 0])
         intersection = None
         closestShape = None
@@ -46,33 +46,39 @@ class Ray:
 
 
 class Material:
-    def __init__(self, diffusivity, specularity):
+    def __init__(self, diffusivity, color):
         self.diffusivity = diffusivity
-        self.specularity = specularity
+        self.color = Color(color)
 
     def getDirections(self, ray, normal, scene):
         directions = []
-        direction = ray.direction-2*normal*np.dot(ray.direction,normal)
-        directions.append((direction,1))
+        direction = ray.direction-2*normal*np.dot(ray.direction, normal)
+        center = (1-self.diffusivity)*direction + self.diffusivity*normal
+        r = self.diffusivity
+        n = 4
+        for i in range(n):
+            directions.append(self.diffusivity*self.getRandSpherePoint()+center)
         return directions
+
+    def getRandSpherePoint(self):
+        z = np.random.random()*2-1
+        r = np.sqrt(1-z**2)
+        theta = np.random.random()*2*np.pi
+        return np.array([r*np.cos(theta), r*np.sin(theta), z])
 
 
 class Shape:
-    def __init__(self, color):
-        self.color = Color(color)
-
     def computeLight(self, ray, intersection, scene, depth):
         directions = self.material.getDirections(ray, self.getNormal(intersection), scene)
         color = Color([0, 0, 0])
-        for direction, magnitude in directions:
+        for direction in directions:
             color2 = scene.shootRay(Ray(intersection+EPSILON*direction, direction), depth+1)
             color = color.add(color2)
-        return color.multiply(self.color)
+        return color.multiply(self.material.color)
 
 
 class Plane(Shape):
-    def __init__(self, normal, point, material, color=[255, 255, 255]):
-        super().__init__(color)
+    def __init__(self, normal, point, material):
         self.normal = np.array(normal)
         self.point = np.array(point)
         self.material = material
@@ -92,8 +98,7 @@ class Plane(Shape):
 
 
 class Sphere(Shape):
-    def __init__(self, origin, radius, material, color=[255, 255, 255]):
-        super().__init__(color)
+    def __init__(self, origin, radius, material):
         self.origin = np.array(origin)
         self.r = radius
         self.material = material
@@ -133,13 +138,14 @@ class Camera:
     def renderImage(self, scene, data, width, height):
         for x in range(width):
             nx = 2*x/width - 1
+            print(x)
             for y in range(height):
                 ny = 1 - 2*y/height
                 a = width/height
                 direction = [a*np.tan(self.fov/2)*nx, np.tan(self.fov/2)*ny, 1]
                 # np.matmul returns the matrix from the matrix multiplication
                 direction = np.matmul(self.matrix, direction)
-                data[y,x] = scene.shootRay(Ray(self.ray.origin, direction)).restore()
+                data[y, x] = scene.shootRay(Ray(self.ray.origin, direction)).restore()
 
 
 class Color:
@@ -162,8 +168,8 @@ class Color:
 
 # Press the green button in the gutter to run the script.
 if __name__ == '__main__':
-    width = 1024
-    height = 1024
+    width = 128
+    height = 128
     data = np.zeros((height, width, 3), dtype=np.uint8)
     camera = Camera(Ray([0, -0.5, 0], [0, 0.20, 1]), np.pi/2)
     camera.renderImage(Scene(), data, width, height)
