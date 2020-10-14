@@ -9,7 +9,7 @@ class Scene:
     def __init__(self):
         self.geometry = [
             Sphere([1.1, 0, 3], 1, Material(1, [100, 200, 100])),
-            Sphere([-1.1, 0, 3], 1, Material(1, [200, 100, 100])),
+            Sphere([-1.1, 0, 3], 1, Material(0.4, [200, 100, 100])),
             Plane([0, 1, 0], [0, -1, 0], Material(1, [100, 100, 200]))
         ]
 
@@ -55,7 +55,7 @@ class Material:
         direction = ray.direction-2*normal*np.dot(ray.direction, normal)
         center = (1-self.diffusivity)*direction + self.diffusivity*normal
         r = self.diffusivity
-        n = 4
+        n = 6
         for i in range(n):
             directions.append(self.diffusivity*self.getRandSpherePoint()+center)
         return directions
@@ -169,8 +169,8 @@ class Color:
 
 # Press the green button in the gutter to run the script.
 if __name__ == '__main__':
-    width = 128
-    height = 128
+    width = 1024
+    height = 1024
     data = np.zeros((height, width, 3), dtype=np.uint8)
     camera = Camera(Ray([0, -0.5, 0], [0, 0.20, 1]), np.pi/2)
     camera.renderImage(Scene(), data, width, height)
