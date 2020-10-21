@@ -3,7 +3,7 @@ import numpy as np
 
 # global approximation value
 EPSILON = 0.01
-
+N = 6
 
 class Scene:
     def __init__(self):
@@ -55,7 +55,7 @@ class Material:
         direction = ray.direction-2*normal*np.dot(ray.direction, normal)
         center = (1-self.diffusivity)*direction + self.diffusivity*normal
         r = self.diffusivity
-        n = 6
+        n = 1
         for i in range(n):
             directions.append(self.diffusivity*self.getRandSpherePoint()+center)
         return directions
@@ -137,20 +137,27 @@ class Camera:
         self.matrix = np.column_stack((right, up, d))
 
     def renderImage(self, scene, data, width, height):
+        tan = np.tan(self.fov/2)
         for x in range(width):
             nx = 2*x/width - 1
             print(x)
             for y in range(height):
                 ny = 1 - 2*y/height
                 a = width/height
-                direction = [a*np.tan(self.fov/2)*nx, np.tan(self.fov/2)*ny, 1]
+                direction = np.array([a*tan*nx, tan*ny, 1])
                 # np.matmul returns the matrix from the matrix multiplication
-                direction = np.matmul(self.matrix, direction)
-                data[y, x] = scene.shootRay(Ray(self.ray.origin, direction)).restore()
+                colorTemp = Color()
+                for i in range(N):
+                    normalizedRandomX = np.random.random()*2 - 1
+                    normalizedRandomY = np.random.random()*2 - 1
+                    adjustment = np.array([normalizedRandomX*a*tan/width, normalizedRandomY*tan/height, 0])
+                    directionTransformed = np.matmul(self.matrix, direction + adjustment)
+                    colorTemp = colorTemp.add(scene.shootRay(Ray(self.ray.origin, directionTransformed)).scale(1/N))
+                data[y, x] = colorTemp.restore()
 
 
 class Color:
-    def __init__(self, rgb):
+    def __init__(self, rgb=[0, 0, 0]):
         self.color = np.array([rgb[0]/255, rgb[1]/255, rgb[2]/255])
 
     def restore(self):
@@ -169,8 +176,8 @@ class Color:
 
 # Press the green button in the gutter to run the script.
 if __name__ == '__main__':
-    width = 1024
-    height = 1024
+    width = 256
+    height = 256
     data = np.zeros((height, width, 3), dtype=np.uint8)
     camera = Camera(Ray([0, -0.5, 0], [0, 0.20, 1]), np.pi/2)
     camera.renderImage(Scene(), data, width, height)
